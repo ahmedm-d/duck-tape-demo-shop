@@ -1,8 +1,10 @@
 """Loopback-only demo endpoint: POST /quote with {items: [...]} JSON."""
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs, urlsplit
 
 from receipt import build_receipt
+from receipt_html import render_receipt_note
 
 
 def quote_handler(payload):
@@ -20,6 +22,19 @@ def quote_handler(payload):
 
 
 class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        url = urlsplit(self.path)
+        if url.path != "/receipt-preview":
+            self.send_error(404)
+            return
+        note = parse_qs(url.query).get("note", [""])[0]
+        body = render_receipt_note(note).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_POST(self):
         if self.path != "/quote":
             self.send_error(404)
