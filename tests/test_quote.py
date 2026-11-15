@@ -11,7 +11,7 @@ class QuoteTests(unittest.TestCase):
         self.assertEqual(result["currency"], CURRENCY)
 
     def test_quantity_regression(self):
-        # Deliberately fails: endpoint -> pricing helper -> configured tax.
+        # Preserve the earlier quantity repair across endpoint/helper/config.
         result = quote_handler({"items": [{"price_cents": 100, "quantity": 2}]})
         self.assertEqual(result["total_cents"], 220)
 

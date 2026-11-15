@@ -1,51 +1,48 @@
 # Duck Tape demo shop
 
-A public, deliberately imperfect fixture for testing Duck Tape's GitHub import,
-repository knowledge, Atlas graph retrieval, knowledge approval, refresh and
-live advisory deduplication. It contains no customer code, data or credentials.
+Public, deliberately imperfect fixture. No customer code or credentials. Do not deploy.
+Tests and the loopback-only HTTP endpoint use the Python standard library.
 
-## Structure and acceptance contract
+## Call graph
 
-- `app.py`: a loopback-only `POST /quote` endpoint and input validation.
-- `receipt.py`: assembles the response using pricing, currency and service metadata.
-- `pricing.py`: shared subtotal and tax calculations.
-- `config.py`: currency and tax configuration.
-- `tests/test_quote.py`: endpoint/helper/configuration regression coverage.
-- `health.py`: shared service label; replaces the removed `legacy.py` module.
-- `requirements.lock`: exact, deliberately old versions for OSV scanning.
+app.quote_handler -> receipt.build_receipt -> pricing.total_cents -> coupons.apply_coupon.
+Pricing/coupons read config; receipt reads metadata, which reads config and health.
 
-**Team constraint:** preserve integer-cent arithmetic; never introduce floating
-point money. Quantity must be applied before tax, and the public response keeps
-the `total_cents` and `currency` fields.
+## Team constraints
 
-## Intentional bug
+- Money uses integer cents, never floats.
+- WELCOME10 discounts the quantity-adjusted subtotal by 10 percent before tax.
+- Round discount down to whole cents; apply configured tax and round tax down too.
+- Preserve total_cents, currency and label. Unknown coupons must be rejected.
+- Omitted coupons preserve behavior. Preserve item validation and the 100-line limit.
 
-The endpoint accepts quantity but `pricing.subtotal_cents()` ignores it. Two
-items at 100 cents each with 10% tax should total 220 cents; the current result
-is 110 cents. This is an intentional cross-module defect for a later AI repair.
+## Intentional coupon defect
 
-Run the reviewed fixture tests with `python -m unittest discover -s tests -v`.
-Expected baseline: three passing tests and one failing quantity regression.
-There is no requirement to install dependencies to execute these fixed tests.
+PR #1 fixed quantity; its repair and regressions remain. The new coupon incorrectly
+subtracts ten cents. The 100-cent smoke case passes because ten percent is ten cents.
+The missing large/small subtotal coverage is deliberate.
 
-The lockfile is advisory test input, not a recommended environment. Actual OSV
-findings must retain their source URLs and retrieval timestamps. A version match
-does not prove the application is exploitable; it does not use Requests at runtime.
+Input: {"items":[{"price_cents":1000,"quantity":2}],"coupon":"WELCOME10"}
+Current total_cents: 2189. Required: 1980 (2000 - 200 discount + 180 tax).
+A one-cent subtotal stays one cent: its rounded-down discount and tax are zero.
 
-## Refresh journey
+Use a real model repair with new failing-before/passing-after regression tests.
+No fixture model response or pre-applied coupon repair is supplied.
 
-The initial commit imported `legacy.py` from the endpoint. The second commit
-removed it, added `health.py` and changed the currency to EUR.
+## Baseline and advisory input
 
-The latest graph demo adds `receipt.py` without changing the quote response.
-In Duck Tape, open Codebase, click Refresh index, then open Files. The file count
-changes from 8 to 9. Under Dependency & impact relationships, follow
-`app.py -> receipt.py`, then `receipt.py -> pricing.py`, `config.py` and `health.py`.
-Click a file in the relationships to inspect its real source evidence.
-The quantity bug stays available for the trained models.
+Run: python -m unittest discover -s tests -v
+Expected baseline: nine passing tests. CI runs the same command.
+requirements.lock is deliberately old advisory-matching input, not installed by CI.
+The application does not import Requests at runtime. An affected version does not
+establish exploitability. Keep actual OSV source URLs and timestamps visible.
 
-## Scope
+## Staged demo PRs
 
-This is synthetic, authored test code, not a live customer application. Importing
-it into Duck Tape does not authorize arbitrary generated code to run on the host.
-Model editing and sandbox verification are separate acceptance gates.
+A separate unsafe receipt-preview PR is for cited, read-only model review. Keep it
+unmerged. Its escaping regression deliberately fails; do not execute HTML payloads.
+A second PR replaces health.py with service_identity.py. Merge only when the
+presenter reaches graph refresh. Refresh the Duck Tape index to see new/deleted
+source and edges, with previous snapshots retained as historical evidence.
+
+Imported/model-generated source executes only in Duck Tape's approved sandbox.

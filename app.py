@@ -16,7 +16,7 @@ def quote_handler(payload):
             value = item.get(field)
             if type(value) is not int or not 0 <= value <= 1000000:
                 raise ValueError(field + " must be a bounded non-negative integer")
-    return build_receipt(items)
+    return build_receipt(items, payload.get("coupon"))
 
 
 class Handler(BaseHTTPRequestHandler):
