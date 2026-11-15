@@ -3,8 +3,7 @@ from config import TAX_BASIS_POINTS
 
 
 def subtotal_cents(items):
-    # Intentional demo bug: quantity is ignored across the endpoint/helper boundary.
-    return sum(item["price_cents"] for item in items)
+    return sum(item["price_cents"] * item["quantity"] for item in items)
 
 
 def total_cents(items):
