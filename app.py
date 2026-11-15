@@ -2,9 +2,7 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from config import CURRENCY
-from health import service_label
-from pricing import total_cents
+from receipt import build_receipt
 
 
 def quote_handler(payload):
@@ -18,7 +16,7 @@ def quote_handler(payload):
             value = item.get(field)
             if type(value) is not int or not 0 <= value <= 1000000:
                 raise ValueError(field + " must be a bounded non-negative integer")
-    return {"total_cents": total_cents(items), "currency": CURRENCY, "label": service_label()}
+    return build_receipt(items)
 
 
 class Handler(BaseHTTPRequestHandler):
